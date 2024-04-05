@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 
+import itertools
 import fire
 import requests
 from typing import Dict, List, Tuple
@@ -15,35 +16,38 @@ br = {
     "sisyphus": branch_sisi,
     "p10": branch_p10,
 }
-
+print(
+    f'{len(br["sisyphus"])} sisy, "\n" {len(br["p10"])} p10'
+)
 
 class MyJsonerCompare:
     """
     делает сравнение полученных списков пакетов и выводит JSON (структуру нужно придумать),
     в котором будет отображено:
-    - все пакеты, которые есть в p10 но нет в sisyphus -> zad_1
-    - все пакеты, которые есть в sisyphus но их нет в p10 -> zad_2
+    - все пакеты, которые есть в p10 но нет в sisyphus                -> zad_1
+    - все пакеты, которые есть в sisyphus но их нет в p10             -> zad_2
     - все пакеты, version-release которых больше в sisyphus чем в p10 -> zad_3
-    {'branch': {
+
+    __json_structure = {'branch': {
         'max_version': '0.0.0',
         'arch': {
-            'branch': {
-                'zad_1': [],
-                'zad_2': [],
-                'zad_3': [],
-            }
+            'pack': [],
         }
-        }
+    }
     }
     """
 
     def __init__(self, packeges: Dict[str, List[Dict]]):
         self.packeges = packeges
-        self.json_structure = {}
+        self.__json_structure = {}
+        self.__arch = []
         self.__prepare_json_structure(packeges)
 
     @staticmethod
     def compare_version(version_1: str, version_2: str):
+        """
+        Compare two version and return True if version_1 > version_2
+        """
         ver_1 = parse(version_1)
         ver_2 = parse(version_2)
         return ver_1 > ver_2
@@ -59,25 +63,56 @@ class MyJsonerCompare:
             None
         """
         for branch in packeges.keys():
-            self.json_structure[branch] = {}
-            self.json_structure[branch]['max_version'] = '0.0.0'
+            self.__json_structure[branch] = {}
+            self.__json_structure[branch]['max_version'] = '0.0.0'
             for d in self.packeges[branch]:
-                if self.compare_version(d['version'], self.json_structure[branch]['max_version']):
-                    self.json_structure[branch]['max_version'] = d['version']
-                if d['arch'] not in self.json_structure[branch].keys():
-                    self.json_structure[branch][d['arch']] = {
+                if self.compare_version(d['version'], self.__json_structure[branch]['max_version']):
+                    self.__json_structure[branch]['max_version'] = d['version']
+                if d['arch'] not in self.__json_structure[branch].keys():
+                    self.__arch.append(d['arch'])
+                    self.__json_structure[branch][d['arch']] = {
                         'pack': [],
-                        'zad_1': [],
-                        'zad_2': [],
-                        'zad_3': [],
                     }
-                self.json_structure[branch][d['arch']]['pack'].append(d)
+                self.__json_structure[branch][d['arch']]['pack'].append(d)
 
 
 
-    def finish_task_json(self, branch_1: List[Dict], branch_2: List[Dict]):
-
-        pass
+    def finish_task_json(self):
+        """
+        - все пакеты, которые есть в p10 но нет в sisyphus                -> zad_1
+        - все пакеты, которые есть в sisyphus но их нет в p10             -> zad_2
+        - все пакеты, version-release которых больше в sisyphus чем в p10 -> zad_3
+        {
+        'arch': {
+            'zad_1': [],
+            'zad_2': [],
+            'zad_3': [],
+            }
+        }
+        """
+        res = dict.fromkeys(self.__arch, {
+            'zad_1': [],
+            'zad_2': [],
+            'zad_3': [],
+        })
+        dd = {'p10': set(), 'sisyphus': set()}
+        for arch in res:
+            for p in self.__json_structure['p10'][arch]['pack']:
+                if p not in self.__json_structure['sisyphus'][arch]['pack']:
+                    res[arch]['zad_1'].append(p)
+                dd['p10'].add(p['version'])
+            for p in self.__json_structure['sisyphus'][arch]['pack']:
+                if p not in self.__json_structure['p10'][arch]['pack']:
+                    res[arch]['zad_2'].append(p)
+                if self.compare_version(p['version'], self.__json_structure['p10']['max_version']):
+                    res[arch]['zad_3'].append(p)
+                dd['sisyphus'].add(p['version'])
+        result_json = json.dumps(res)
+        print(len(res['x86_64-i586']['zad_1']))
+        print(len(res['x86_64-i586']['zad_2']))
+        print(len(res['x86_64-i586']['zad_3']))
+        print(dd)
+        return res
 
 
 
@@ -150,7 +185,7 @@ if __name__ == '__main__':
     # fire.Fire(TestCli())
     a = TestCli()
     res = MyJsonerCompare(br)
-    pprint.pprint(res.json_structure)
+    pprint.pprint(res.finish_task_json())
 
 
 

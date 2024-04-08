@@ -1,24 +1,17 @@
 #!/usr/bin/env python3
 import json
-
-import itertools
 import fire
 import requests
 from typing import Dict, List, Tuple
-from packaging.version import parse
+from packaging.version import parse, InvalidVersion
+import pandas as pd
 import pprint
+import random
+import tqdm
+
 
 URL = "https://rdb.altlinux.org/api"
 
-branch_sisi = [{'name': 'i586-zlib-devel-static', 'epoch': 0, 'version': '1.3.1', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+342532.100.1.1', 'buildtime': 1710232619, 'source': ''}, {'name': 'i586-zlib-ng-devel', 'epoch': 0, 'version': '2.1.6', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+338936.100.1.1', 'buildtime': 1706169829, 'source': ''}, {'name': 'i586-zlib-ng-devel-static', 'epoch': 0, 'version': '2.1.6', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+338936.100.1.1', 'buildtime': 1706169831, 'source': ''}, {'name': 'i586-zmusic-devel', 'epoch': 0, 'version': '1.1.12', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+324576.100.1.1', 'buildtime': 1688980650, 'source': ''}, {'name': 'i586-zsh', 'epoch': 1, 'version': '5.9', 'release': 'alt2', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+327286.6500.14.1', 'buildtime': 1711550531, 'source': ''}, {'name': 'i586-zyn-fusion', 'epoch': 0, 'version': '3.0.6', 'release': 'alt3', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+343228.100.1.1', 'buildtime': 1711009644, 'source': ''}, {'name': 'i586-zynaddsubfx', 'epoch': 0, 'version': '3.0.6', 'release': 'alt4', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+328262.100.1.1', 'buildtime': 1693393020, 'source': ''}, {'name': 'i586-zziplib', 'epoch': 0, 'version': '0.13.72', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+278032.100.1.2', 'buildtime': 1625982255, 'source': ''}, {'name': 'i586-zziplib-devel', 'epoch': 0, 'version': '0.13.72', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+278032.100.1.2', 'buildtime': 1625982256, 'source': ''}, {'name': 'i586-zzuf', 'epoch': 0, 'version': '0.15', 'release': 'alt1_10', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+225100.100.1.1', 'buildtime': 1552687303, 'source': ''}]
-branch_p10 = [{'name': 'i586-zathura-djvu', 'epoch': 0, 'version': '0.2.9', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+244005.300.1.3', 'buildtime': 1578594339, 'source': ''}, {'name': 'i586-zathura-pdf-poppler', 'epoch': 0, 'version': '0.3.0', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+244005.400.1.3', 'buildtime': 1578594341, 'source': ''}, {'name': 'i586-zathura-ps', 'epoch': 0, 'version': '0.2.7', 'release': 'alt1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+278951.400.1.2', 'buildtime': 1626302661, 'source': ''}, {'name': 'i586-zchunk-devel', 'epoch': 0, 'version': '1.1.15', 'release': 'alt1_1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+278120.100.1.1', 'buildtime': 1626030287, 'source': ''}, {'name': 'i586-zchunk-libs', 'epoch': 0, 'version': '1.1.15', 'release': 'alt1_1', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+278120.100.1.1', 'buildtime': 1626030289, 'source': ''}, {'name': 'i586-zinnia-perl', 'epoch': 0, 'version': '0.06', 'release': 'alt1_60', 'arch': 'x86_64-i586', 'disttag': 'p10+323904.340.7.1', 'buildtime': 1689695494, 'source': ''}, {'name': 'i586-zint', 'epoch': 0, 'version': '2.9.1', 'release': 'alt2', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+277670.100.1.1', 'buildtime': 1625735340, 'source': ''}, {'name': 'i586-zint-devel', 'epoch': 0, 'version': '2.9.1', 'release': 'alt2', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+277670.100.1.1', 'buildtime': 1625735342, 'source': ''}, {'name': 'i586-zint-qt', 'epoch': 0, 'version': '2.9.1', 'release': 'alt2', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+277670.100.1.1', 'buildtime': 1625735344, 'source': ''}, {'name': 'i586-zint-qt-devel', 'epoch': 0, 'version': '2.9.1', 'release': 'alt2', 'arch': 'x86_64-i586', 'disttag': 'sisyphus+277670.100.1.1', 'buildtime': 1625735345, 'source': ''}, {'name': 'i586-zipios++', 'epoch': 0, 'version': '0.1.5.9', 'release': 'alt2_20', 'arch': 'x86_64-i586', 'disttag': '', 'buildtime': 1527355679, 'source': ''}]
-br = {
-    "sisyphus": branch_sisi,
-    "p10": branch_p10,
-}
-print(
-    f'{len(br["sisyphus"])} sisy, "\n" {len(br["p10"])} p10'
-)
 
 class MyJsonerCompare:
     """
@@ -27,99 +20,103 @@ class MyJsonerCompare:
     - все пакеты, которые есть в p10 но нет в sisyphus                -> zad_1
     - все пакеты, которые есть в sisyphus но их нет в p10             -> zad_2
     - все пакеты, version-release которых больше в sisyphus чем в p10 -> zad_3
-
-    __json_structure = {'branch': {
-        'max_version': '0.0.0',
-        'arch': {
-            'pack': [],
-        }
-    }
-    }
     """
 
     def __init__(self, packeges: Dict[str, List[Dict]]):
         self.packeges = packeges
-        self.__json_structure = {}
-        self.__arch = []
-        self.__prepare_json_structure(packeges)
+        self.__prepare_data = {
+            f'{branch}': pd.DataFrame(data=packeges[branch]) for branch in self.packeges.keys()
+        }
+        self.invalid_version_pack = {f'{branch}': [] for branch in self.packeges.keys()}
+        self.max_version = {f'{branch}': '0.0.0' for branch in self.packeges.keys()}
 
     @staticmethod
     def compare_version(version_1: str, version_2: str):
         """
         Compare two version and return True if version_1 > version_2
+        if InvalidVersion - return 'OOps'
+
+        For such data, normal comparison rules are needed!
         """
-        ver_1 = parse(version_1)
-        ver_2 = parse(version_2)
-        return ver_1 > ver_2
+        # ver_2 = parse(version_2)
+        # try:
+        #     ver_1 = parse(version_1)
+        #
+        #     parts = version_1.split('.')
+        #     if len(parts[0]) > 2:
+        #         return "OOps"
+        # except InvalidVersion:
+        #     return "OOps"
+        # return ver_1 > ver_2
 
-    def __prepare_json_structure(self, packeges: Dict[str, List[Dict]]) -> None:
+        random_int = random.randint(0, 100)
+        if random_int > 50:
+            return True
+        else:
+            return "OOps"
+
+    def find_max_version(self, str_branch: str) -> None:
         """
-        Create a suitable structure for the future returned object JSON
-
-        Parameters:
-            branches (Dict): A dictionary containing branches
-
-        Returns:
-            None
+        Find max version in DataFrame
         """
-        for branch in packeges.keys():
-            self.__json_structure[branch] = {}
-            self.__json_structure[branch]['max_version'] = '0.0.0'
-            for d in self.packeges[branch]:
-                if self.compare_version(d['version'], self.__json_structure[branch]['max_version']):
-                    self.__json_structure[branch]['max_version'] = d['version']
-                if d['arch'] not in self.__json_structure[branch].keys():
-                    self.__arch.append(d['arch'])
-                    self.__json_structure[branch][d['arch']] = {
-                        'pack': [],
-                    }
-                self.__json_structure[branch][d['arch']]['pack'].append(d)
-
-
+        for index, row in self.__prepare_data[str_branch].iterrows():
+            com_ver = self.compare_version(row['version'], self.max_version['p10'])
+            if com_ver == 'OOps':
+                self.invalid_version_pack[str_branch].append(row.to_dict())
+            elif com_ver:
+                self.max_version[str_branch] = row['version']
 
     def finish_task_json(self):
         """
         - все пакеты, которые есть в p10 но нет в sisyphus                -> zad_1
         - все пакеты, которые есть в sisyphus но их нет в p10             -> zad_2
         - все пакеты, version-release которых больше в sisyphus чем в p10 -> zad_3
-        {
-        'arch': {
-            'zad_1': [],
-            'zad_2': [],
-            'zad_3': [],
+
+        result_json = {
+            'arch': {
+                'zad_1': [],
+                'zad_2': [],
+                'zad_3': [],
             }
         }
+        :return
+        JSON ('result_json')
         """
-        res = dict.fromkeys(self.__arch, {
-            'zad_1': [],
-            'zad_2': [],
-            'zad_3': [],
-        })
-        dd = {'p10': set(), 'sisyphus': set()}
-        for arch in res:
-            for p in self.__json_structure['p10'][arch]['pack']:
-                if p not in self.__json_structure['sisyphus'][arch]['pack']:
-                    res[arch]['zad_1'].append(p)
-                dd['p10'].add(p['version'])
-            for p in self.__json_structure['sisyphus'][arch]['pack']:
-                if p not in self.__json_structure['p10'][arch]['pack']:
-                    res[arch]['zad_2'].append(p)
-                if self.compare_version(p['version'], self.__json_structure['p10']['max_version']):
-                    res[arch]['zad_3'].append(p)
-                dd['sisyphus'].add(p['version'])
-        result_json = json.dumps(res)
-        print(len(res['x86_64-i586']['zad_1']))
-        print(len(res['x86_64-i586']['zad_2']))
-        print(len(res['x86_64-i586']['zad_3']))
-        print(dd)
-        return res
+        res_json = {}
+        self.find_max_version('p10')
+        merged_df = pd.merge(self.__prepare_data['p10'], self.__prepare_data['sisyphus'], how='outer', indicator=True)
 
+        for arch, group in merged_df.groupby('arch'):
+            res_json[arch] = {
+                'zad_1': [],
+                'zad_2': [],
+                'zad_3': []
+            }
+            for index, row in group.iterrows():
+                if row['_merge'] == 'left_only':
+                    res_json[arch]['zad_1'].append(row.to_dict())
+                if row['_merge'] == 'right_only':
+                    res_json[arch]['zad_2'].append(row.to_dict())
 
+                    com_ver = self.compare_version(row['version'], self.max_version['p10'])
+                    if com_ver == 'OOps':
+                        self.invalid_version_pack['sisyphus'].append(row.to_dict())
+                    elif com_ver:
+                        res_json[arch]['zad_3'].append(row.to_dict())
+
+        result_json = json.dumps(res_json)
+        return result_json
 
 
 class TestCli:
     """
-    Blabla
+    1) получает списки бинарных пакетов ветки sisyphus и p10
+    2) делает сравнение полученных списков пакетов и выводит JSON (структуру нужно придумать),
+    в котором будет отображено:
+    - все пакеты, которые есть в p10 но нет в sisyphus
+    - все пакеты, которые есть в sisyphus но их нет в p10
+    - все пакеты, version-release которых больше в sisyphus чем в p10
+    Это нужно сделать для каждой из поддерживаемых веткой архитектур (поле arch в ответе)
     """
 
     def __init__(self, url=URL):
@@ -138,6 +135,7 @@ class TestCli:
         str: The URL of the API.
         """
         return self.api_url
+
     @property
     def get_api_methods(self) -> Dict[int, str]:
         """
@@ -177,15 +175,25 @@ class TestCli:
         }
         return dict_of_branch_pack
 
-    def main(self):
-        pass
+    def perform_task(self):
+        """
+        Result task
+        :return:
+        JSON ('result_json')
+        """
+        packs = self.take_packages_from_branches()
+        # compare_packs = MyJsonerCompare(br)
+        with open("data.json", "r") as f:
+        # compare_packs = MyJsonerCompare(packs)
+            compare_packs = MyJsonerCompare(json.load(f))
+            return compare_packs.finish_task_json()
 
 
 if __name__ == '__main__':
     # fire.Fire(TestCli())
     a = TestCli()
-    res = MyJsonerCompare(br)
-    pprint.pprint(res.finish_task_json())
+    res = a.perform_task()
+    pprint.pprint(res)
 
 
 

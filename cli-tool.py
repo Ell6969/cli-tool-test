@@ -9,10 +9,6 @@ import pprint
 import random
 import tqdm
 
-
-URL = "https://rdb.altlinux.org/api"
-
-
 class MyJsonerCompare:
     """
     делает сравнение полученных списков пакетов и выводит JSON (структуру нужно придумать),
@@ -59,12 +55,17 @@ class MyJsonerCompare:
         """
         Find max version in DataFrame
         """
+        total_iterations = len(self.__prepare_data[str_branch])
+        pbar = tqdm.tqdm(total=total_iterations, desc="Find max version in DataFrame", colour='cyan')
+
         for index, row in self.__prepare_data[str_branch].iterrows():
             com_ver = self.compare_version(row['version'], self.max_version['p10'])
             if com_ver == 'OOps':
                 self.invalid_version_pack[str_branch].append(row.to_dict())
             elif com_ver:
                 self.max_version[str_branch] = row['version']
+            pbar.update(1)
+        pbar.close()
 
     def finish_task_json(self):
         """
@@ -86,6 +87,9 @@ class MyJsonerCompare:
         self.find_max_version('p10')
         merged_df = pd.merge(self.__prepare_data['p10'], self.__prepare_data['sisyphus'], how='outer', indicator=True)
 
+        total_iterations = len(merged_df)
+        pbar = tqdm.tqdm(total=total_iterations, desc="Let's complete the task...", colour='magenta')
+
         for arch, group in merged_df.groupby('arch'):
             res_json[arch] = {
                 'zad_1': [],
@@ -93,19 +97,24 @@ class MyJsonerCompare:
                 'zad_3': []
             }
             for index, row in group.iterrows():
+                pbar.update(1)
+
                 if row['_merge'] == 'left_only':
-                    res_json[arch]['zad_1'].append(row.to_dict())
+                    res_json[arch]['zad_1'].append(row.drop('_merge').to_dict())
                 if row['_merge'] == 'right_only':
-                    res_json[arch]['zad_2'].append(row.to_dict())
+                    res_json[arch]['zad_2'].append(row.drop('_merge').to_dict())
 
                     com_ver = self.compare_version(row['version'], self.max_version['p10'])
                     if com_ver == 'OOps':
-                        self.invalid_version_pack['sisyphus'].append(row.to_dict())
+                        self.invalid_version_pack['sisyphus'].append(row.drop('_merge').to_dict())
                     elif com_ver:
-                        res_json[arch]['zad_3'].append(row.to_dict())
-
+                        res_json[arch]['zad_3'].append(row.drop('_merge').to_dict())
+        pbar.close()
         result_json = json.dumps(res_json)
         return result_json
+
+
+URL = "https://rdb.altlinux.org/api"
 
 
 class TestCli:
@@ -120,46 +129,53 @@ class TestCli:
     """
 
     def __init__(self, url=URL):
-        self.api_url = url
-        self.branches = ("sisyphus", "p10")
-        self.api_methods = {
+        self._api_url = url
+        self._branches = ("sisyphus", "p10")
+        self._api_methods = {
             1: '/export/branch_binary_packages/{branch}',
         }
-        self.choice_api_method = 1
+        self._choice_api_method = 1
 
     @property
-    def get_api_url(self) -> str:
+    def api_url(self) -> str:
         """
         Getter method for retrieving the api_url attribute.
         Returns:
         str: The URL of the API.
         """
-        return self.api_url
+        return self._api_url
+
+    @api_url.setter
+    def api_url(self, value):
+        """
+        Setter method for the api_url property.
+        Parameters:
+            value (str): The new value for the api_url.
+        Raises:
+            ValueError: If the provided value is not a string.
+        Example:
+            "https://rdb.altlinux.org/api"
+        """
+        if not isinstance(value, str):
+            raise ValueError("api_url must be a string")
+        self._api_url = value
 
     @property
-    def get_api_methods(self) -> Dict[int, str]:
+    def api_methods(self) -> Dict[int, str]:
         """
         Return the dictionary of API methods available.
         Dict[index, method]
         """
-        return self.api_methods
+        return self._api_methods
 
     @property
-    def get_branches(self) -> Tuple:
+    def branches(self) -> Tuple:
         """
         Getter method for retrieving the branches attribute.
         Returns:
         Tuple: A tuple containing the branches.
         """
-        return self.branches
-
-    def update_api_method(self, num_method: int) -> None:
-        """
-        Update the choice_api method attribute with the index of the selected method.
-        Args:
-        num_method (int): The index of the selected method.
-        """
-        self.choice_api_method = num_method
+        return self._branches
 
     def take_packages_from_branches(self) -> Dict[str, List[Dict]]:
         """
@@ -168,11 +184,18 @@ class TestCli:
         :return
         dict[str_branch: list[packages]]
         """
-        ready_url_with_branch = self.api_url + self.api_methods[self.choice_api_method]
-        dict_of_branch_pack = {
-            branch: requests.get(ready_url_with_branch.format(branch=branch)).json()['packages']
-            for branch in self.branches
-        }
+
+        ready_url_with_branch = self.api_url + self.api_methods[self._choice_api_method]
+        try:
+            dict_of_branch_pack = {
+                branch: requests.get(ready_url_with_branch.format(branch=branch), timeout=10).json()['packages']
+                for branch in self.branches
+            }
+        except requests.Timeout:
+            raise TimeoutError("The request timed out")
+        except requests.RequestException as e:
+            raise RuntimeError("Error:", e)
+
         return dict_of_branch_pack
 
     def perform_task(self):

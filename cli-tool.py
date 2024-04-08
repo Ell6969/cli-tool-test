@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import json
-import fire
-import requests
-from typing import Dict, List, Tuple
-from packaging.version import parse, InvalidVersion
-import pandas as pd
-import pprint
 import random
+from typing import Dict, List, Tuple
+
+import fire
+import pandas as pd
+import requests
 import tqdm
+from packaging.version import InvalidVersion, parse
+
 
 class MyJsonerCompare:
     """
@@ -177,7 +178,7 @@ class TestCli:
         """
         return self._branches
 
-    def take_packages_from_branches(self) -> Dict[str, List[Dict]]:
+    def _take_packages_from_branches(self) -> Dict[str, List[Dict]]:
         """
         Take packages from branches and return a dictionary where keys are branch names
         and values are lists of dictionaries containing packages.
@@ -204,54 +205,10 @@ class TestCli:
         :return:
         JSON ('result_json')
         """
-        packs = self.take_packages_from_branches()
-        # compare_packs = MyJsonerCompare(br)
-        with open("data.json", "r") as f:
-        # compare_packs = MyJsonerCompare(packs)
-            compare_packs = MyJsonerCompare(json.load(f))
-            return compare_packs.finish_task_json()
+        packs = self._take_packages_from_branches()
+        compare_packs = MyJsonerCompare(packs)
+        return compare_packs.finish_task_json()
 
 
 if __name__ == '__main__':
-    # fire.Fire(TestCli())
-    a = TestCli()
-    res = a.perform_task()
-    pprint.pprint(res)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    fire.Fire(TestCli())

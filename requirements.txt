@@ -1,13 +1,19 @@
+altgraph==0.17.4
 certifi==2024.2.2
 charset-normalizer==3.3.2
 colorama==0.4.6
 fire==0.6.0
 idna==3.6
+isort==5.13.2
 numpy==1.26.4
 packaging==24.0
 pandas==2.2.1
+pefile==2023.2.7
+pyinstaller @ https://github.com/pyinstaller/pyinstaller/tarball/develop#sha256=40105f28ad67ee35fa8ed20bababfcfe20e60a63024a78a2b179486f517b854d
+pyinstaller-hooks-contrib==2024.3
 python-dateutil==2.9.0.post0
 pytz==2024.1
+pywin32-ctypes==0.2.2
 requests==2.31.0
 six==1.16.0
 termcolor==2.4.0

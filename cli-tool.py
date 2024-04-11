@@ -10,13 +10,12 @@ import tqdm
 from packaging.version import InvalidVersion, parse
 
 
+URL = "https://rdb.altlinux.org/api"
+
+
 class MyJsonerCompare:
     """
-    делает сравнение полученных списков пакетов и выводит JSON (структуру нужно придумать),
-    в котором будет отображено:
-    - все пакеты, которые есть в p10 но нет в sisyphus                -> zad_1
-    - все пакеты, которые есть в sisyphus но их нет в p10             -> zad_2
-    - все пакеты, version-release которых больше в sisyphus чем в p10 -> zad_3
+    делает сравнение полученных списков пакетов и выводит JSON
     """
 
     def __init__(self, packeges: Dict[str, List[Dict]]):
@@ -113,9 +112,6 @@ class MyJsonerCompare:
         pbar.close()
         result_json = json.dumps(res_json)
         return result_json
-
-
-URL = "https://rdb.altlinux.org/api"
 
 
 class TestCli:
